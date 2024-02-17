@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"sort"
+	"strconv"
 	"strings"
-	"sync"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func RespondWithError(w http.ResponseWriter, code int, msg string) {
@@ -48,10 +49,8 @@ func cleanInput(input string) string {
 }
 
 func (db *DB) GetChirpsHandler(w http.ResponseWriter, r *http.Request) {
-	db.mux.Lock()
-	defer db.mux.Unlock()
+
 	chirpsSlice, err := db.GetChirps()
-	fmt.Println(chirpsSlice)
 	if err != nil {
 		RespondWithError(w, 500, fmt.Sprintf("%s\n", err))
 		return
@@ -67,8 +66,7 @@ func (db *DB) GetChirpsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (db *DB) PostChirpHandler(w http.ResponseWriter, r *http.Request) {
-	db.mux.Lock()
-	defer db.mux.Unlock()
+
 	type returnVals struct {
 		Body string `json:"body"`
 		Id   int    `json:"id"`
@@ -88,17 +86,17 @@ func (db *DB) PostChirpHandler(w http.ResponseWriter, r *http.Request) {
 		msg := fmt.Sprintf("Error creating chirp: %s\n", err)
 		RespondWithError(w, 500, msg)
 	}
-	dbStruct, err := db.loadDB()
+	dbStructure, err := db.loadDB()
 	if err != nil {
 		msg := fmt.Sprintf("Error loading database: %s\n", err)
 		RespondWithError(w, 500, msg)
 	}
-	dbStruct.Chirps[db.NextId] = chirp
-	db.writeDB(dbStruct)
+	dbStructure.Chirps[len(dbStructure.Chirps)+1] = chirp
+	db.writeDB(dbStructure)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(201)
 	err = json.NewEncoder(w).Encode(returnVals{
-		Id:   db.NextId,
+		Id:   len(dbStructure.Chirps),
 		Body: params.Body,
 	})
 	if err != nil {
@@ -108,86 +106,57 @@ func (db *DB) PostChirpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (db *DB) GetChirpHandler(w http.ResponseWriter, r *http.Request) {
+
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		RespondWithError(w, 500, fmt.Sprintf("%s\n", err))
+		return
+	}
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		RespondWithError(w, 400, fmt.Sprintf("%s\n", err))
+		return
+	}
+	val, exists := dbStructure.Chirps[id]
+	if !exists {
+		RespondWithError(w, 404, fmt.Sprintln("The database doesn't contain that id"))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(val)
+	if err != nil {
+		RespondWithError(w, 500, fmt.Sprintf("%s\n", err))
+		return
+	}
+}
+
 func (db *DB) CreateChirp(body string) (Chirp, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return Chirp{}, err
+	}
 	if len(body) > 140 {
 		return Chirp{}, errors.New("Chirp is too long")
 	}
-	cleanedChirp := cleanInput(body)
-	db.NextId++
 	return Chirp{
-		Body: cleanedChirp,
-		Id:   db.NextId,
+		Body: cleanInput(body),
+		Id:   len(dbStructure.Chirps) + 1,
 	}, nil
 }
 
 func (db *DB) GetChirps() ([]Chirp, error) {
 	chirps := []Chirp{}
-	dbStruct, err := db.loadDB()
+	dbStructure, err := db.loadDB()
 	if err != nil {
 		return nil, err
 	}
-	for _, v := range dbStruct.Chirps {
+	for _, v := range dbStructure.Chirps {
 		chirps = append(chirps, v)
 	}
 	sort.Slice(chirps, func(i, j int) bool {
 		return chirps[i].Id < chirps[j].Id
 	})
 	return chirps, nil
-}
-
-// NewDB creates a new database connection
-// and creates the database file if it doesn't exist
-func NewDB(path string) (*DB, error) {
-	db := DB{
-		path:   path,
-		mux:    &sync.RWMutex{},
-		NextId: 0,
-	}
-	err := db.ensureDB()
-	if err != nil {
-		return nil, err
-	}
-	err = db.writeDB(DBStructure{
-		Chirps: map[int]Chirp{},
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &db, nil
-}
-
-// ensureDB creates a new database file if it doesn't exist
-func (db *DB) ensureDB() error {
-	err := os.WriteFile(db.path, []byte(""), 0666)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (db *DB) loadDB() (DBStructure, error) {
-	db.mux.Lock()
-	defer db.mux.Unlock()
-	dat, err := os.ReadFile(db.path)
-	if err != nil {
-		return DBStructure{}, err
-	}
-	dbStruc := DBStructure{}
-	err = json.Unmarshal(dat, &dbStruc)
-	if err != nil {
-		return DBStructure{}, err
-	}
-	return dbStruc, nil
-}
-
-// writeDB writes the database file to disk
-func (db *DB) writeDB(dbStructure DBStructure) error {
-	db.mux.Lock()
-	defer db.mux.Unlock()
-	dat, err := json.Marshal(dbStructure)
-	if err != nil {
-		return err
-	}
-	os.WriteFile(db.path, dat, 0666)
-	return nil
 }

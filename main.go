@@ -38,6 +38,9 @@ func main() {
 	apiRouter.Get("/chirps", apiCfg.DB.GetChirpsHandler)
 	apiRouter.Post("/chirps", apiCfg.DB.PostChirpHandler)
 
+	apiRouter.Get("/chirps/{id}", apiCfg.DB.GetChirpHandler)
+	apiRouter.Post("/users", apiCfg.DB.PostUserHandler)
+
 	adminRouter.Get("/metrics", apiCfg.getMetrics)
 	r.Mount("/api", apiRouter)
 	r.Mount("/admin", adminRouter)
