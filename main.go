@@ -6,9 +6,11 @@ import (
 
 	"github.com/SamiZeinsAI/web-server/internal/database"
 	"github.com/go-chi/chi/v5"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	godotenv.Load()
 
 	const port = "8080"
 	filepathRoot := "."
@@ -40,6 +42,7 @@ func main() {
 
 	apiRouter.Get("/chirps/{id}", apiCfg.DB.GetChirpHandler)
 	apiRouter.Post("/users", apiCfg.DB.PostUserHandler)
+	apiRouter.Post("/login", apiCfg.DB.PostUserLoginHandler)
 
 	adminRouter.Get("/metrics", apiCfg.getMetrics)
 	r.Mount("/api", apiRouter)

@@ -75,8 +75,7 @@ func (db *DB) PostChirpHandler(w http.ResponseWriter, r *http.Request) {
 		Body string `json:"body"`
 	}
 	params := parameters{}
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&params)
+	err := json.NewDecoder(r.Body).Decode(&params)
 	if err != nil {
 		RespondWithError(w, 500, "Error when decoding request")
 		return

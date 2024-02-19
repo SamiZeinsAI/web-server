@@ -11,8 +11,9 @@ type DBStructure struct {
 	Users  map[int]User  `json:"users"`
 }
 type User struct {
-	Id    int    `json:"id"`
-	Email string `json:"string"`
+	Id       int    `json:"id"`
+	Email    string `json:"email"`
+	Password []byte `json:"password"`
 }
 type Chirp struct {
 	Body string `json:"body"`
