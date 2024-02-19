@@ -37,12 +37,12 @@ func main() {
 
 	apiRouter.Get("/healthz", handlerReadiness)
 	apiRouter.Get("/reset", apiCfg.resetMetrics)
-	apiRouter.Get("/chirps", apiCfg.DB.GetChirpsHandler)
-	apiRouter.Post("/chirps", apiCfg.DB.PostChirpHandler)
+	apiRouter.Get("/chirps", apiCfg.GetChirpsHandler)
+	apiRouter.Post("/chirps", apiCfg.PostChirpHandler)
 
-	apiRouter.Get("/chirps/{id}", apiCfg.DB.GetChirpHandler)
-	apiRouter.Post("/users", apiCfg.DB.PostUserHandler)
-	apiRouter.Post("/login", apiCfg.DB.PostUserLoginHandler)
+	apiRouter.Get("/chirps/{id}", apiCfg.GetChirpHandler)
+	apiRouter.Post("/users", apiCfg.PostUserHandler)
+	apiRouter.Post("/login", apiCfg.PostUserLoginHandler)
 
 	adminRouter.Get("/metrics", apiCfg.getMetrics)
 	r.Mount("/api", apiRouter)

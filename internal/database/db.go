@@ -13,11 +13,11 @@ func NewDB(path string) (*DB, error) {
 		path: path,
 		mux:  &sync.RWMutex{},
 	}
-	err := db.ensureDB()
+	err := db.EnsureDB()
 	if err != nil {
 		return nil, err
 	}
-	err = db.writeDB(DBStructure{
+	err = db.WriteDB(DBStructure{
 		Chirps: map[int]Chirp{},
 		Users:  map[int]User{},
 	})
@@ -28,10 +28,10 @@ func NewDB(path string) (*DB, error) {
 }
 
 // ensureDB creates a new database file if it doesn't exist
-func (db *DB) ensureDB() error {
+func (db *DB) EnsureDB() error {
 	dat, err := os.ReadFile(db.path)
 	if err != nil {
-		db.writeDB(DBStructure{
+		db.WriteDB(DBStructure{
 			Chirps: map[int]Chirp{},
 			Users:  map[int]User{},
 		})
@@ -43,7 +43,7 @@ func (db *DB) ensureDB() error {
 	}
 	err = json.Unmarshal(dat, &dbStruc)
 	if err != nil {
-		db.writeDB(DBStructure{
+		db.WriteDB(DBStructure{
 			Chirps: map[int]Chirp{},
 		})
 		return nil
@@ -51,7 +51,7 @@ func (db *DB) ensureDB() error {
 	return nil
 }
 
-func (db *DB) loadDB() (DBStructure, error) {
+func (db *DB) LoadDB() (DBStructure, error) {
 	db.mux.Lock()
 	defer db.mux.Unlock()
 	dat, err := os.ReadFile(db.path)
@@ -67,7 +67,7 @@ func (db *DB) loadDB() (DBStructure, error) {
 }
 
 // writeDB writes the database file to disk
-func (db *DB) writeDB(dbStructure DBStructure) error {
+func (db *DB) WriteDB(dbStructure DBStructure) error {
 	db.mux.Lock()
 	defer db.mux.Unlock()
 	dat, err := json.Marshal(dbStructure)
