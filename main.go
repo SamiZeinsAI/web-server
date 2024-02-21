@@ -1,8 +1,10 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/SamiZeinsAI/web-server/internal/database"
 	"github.com/go-chi/chi/v5"
@@ -19,10 +21,22 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	dbg := flag.Bool("debug", false, "Enable debug mode")
+	flag.Parse()
+	if dbg != nil && *dbg {
+		err := db.WriteDB(database.DBStructure{
+			Chirps: map[int]database.Chirp{},
+			Users:  map[int]database.User{},
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 
 	apiCfg := apiConfig{
 		fileserverHits: 0,
 		DB:             db,
+		jwtSecret:      os.Getenv("JWT_SECRET"),
 	}
 
 	r := chi.NewRouter()
@@ -39,9 +53,11 @@ func main() {
 	apiRouter.Get("/reset", apiCfg.resetMetrics)
 	apiRouter.Get("/chirps", apiCfg.GetChirpsHandler)
 	apiRouter.Post("/chirps", apiCfg.PostChirpHandler)
-
 	apiRouter.Get("/chirps/{id}", apiCfg.GetChirpHandler)
+
 	apiRouter.Post("/users", apiCfg.PostUserHandler)
+	apiRouter.Put("/users", apiCfg.UpdateUserHandler)
+
 	apiRouter.Post("/login", apiCfg.PostUserLoginHandler)
 
 	adminRouter.Get("/metrics", apiCfg.getMetrics)
