@@ -25,8 +25,9 @@ func main() {
 	flag.Parse()
 	if dbg != nil && *dbg {
 		err := db.WriteDB(database.DBStructure{
-			Chirps: map[int]database.Chirp{},
-			Users:  map[int]database.User{},
+			Chirps:        map[int]database.Chirp{},
+			Users:         map[int]database.User{},
+			RevokedTokens: map[string]database.RevokedToken{},
 		})
 		if err != nil {
 			log.Fatal(err)
@@ -51,14 +52,19 @@ func main() {
 
 	apiRouter.Get("/healthz", handlerReadiness)
 	apiRouter.Get("/reset", apiCfg.resetMetrics)
+
 	apiRouter.Get("/chirps", apiCfg.GetChirpsHandler)
 	apiRouter.Post("/chirps", apiCfg.PostChirpHandler)
 	apiRouter.Get("/chirps/{id}", apiCfg.GetChirpHandler)
 
 	apiRouter.Post("/users", apiCfg.PostUserHandler)
-	apiRouter.Put("/users", apiCfg.UpdateUserHandler)
+	apiRouter.Put("/users", apiCfg.PutUserHandler)
 
-	apiRouter.Post("/login", apiCfg.PostUserLoginHandler)
+	apiRouter.Post("/login", apiCfg.PostLoginHandler)
+
+	apiRouter.Post("/refresh", apiCfg.PostRefreshHandler)
+
+	apiRouter.Post("/revoke", apiCfg.PostRevokeHandler)
 
 	adminRouter.Get("/metrics", apiCfg.getMetrics)
 	r.Mount("/api", apiRouter)

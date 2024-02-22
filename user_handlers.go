@@ -5,15 +5,11 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
-	"github.com/SamiZeinsAI/web-server/internal/database"
-	"github.com/SamiZeinsAI/web-server/internal/database/auth"
-	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/SamiZeinsAI/web-server/internal/auth"
 )
 
-func (cfg *apiConfig) UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) PutUserHandler(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -35,16 +31,18 @@ func (cfg *apiConfig) UpdateUserHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	claimsStruct := jwt.RegisteredClaims{}
-	token, err := jwt.ParseWithClaims(
-		tokenString,
-		&claimsStruct,
-		func(key *jwt.Token) (interface{}, error) { return []byte(cfg.jwtSecret), nil },
-	)
+	token, err := auth.ParseToken(tokenString, cfg.jwtSecret)
 	if err != nil {
 		RespondWithError(w, 401, fmt.Sprintf("%s\n", err))
 		return
 	}
+	issuer, err := token.Claims.GetIssuer()
+	fmt.Printf("%s\n", issuer)
+	if err != nil || issuer == "chirpy-refresh" {
+		RespondWithError(w, 401, "Error finding valid access token")
+		return
+	}
+
 	id, err := token.Claims.GetSubject()
 	if err != nil {
 		RespondWithError(w, 500, fmt.Sprintf("%s\n", err))
@@ -61,85 +59,6 @@ func (cfg *apiConfig) UpdateUserHandler(w http.ResponseWriter, r *http.Request) 
 		Email: params.Email,
 		Id:    idInt,
 	})
-	if err != nil {
-		RespondWithError(w, 500, fmt.Sprintf("%s\n", err))
-		return
-	}
-}
-
-func (cfg *apiConfig) PostUserLoginHandler(w http.ResponseWriter, r *http.Request) {
-
-	type parameters struct {
-		Email            string `json:"email"`
-		Password         string `json:"password"`
-		ExpiresInSeconds int    `json:"expires_in_seconds"`
-	}
-	type returnVals struct {
-		Id    int    `json:"id"`
-		Email string `json:"email"`
-		Token string `json:"token"`
-	}
-
-	params := parameters{}
-
-	err := json.NewDecoder(r.Body).Decode(&params)
-	if err != nil {
-		RespondWithError(w, 400, fmt.Sprintf("%s\n", err))
-		return
-	}
-
-	dbStructure, err := cfg.DB.LoadDB()
-	if err != nil {
-		RespondWithError(w, 500, fmt.Sprintf("%s\n", err))
-		return
-	}
-	matchingUser := database.User{}
-	foundMatch := false
-	for _, user := range dbStructure.Users {
-		if user.Email == params.Email {
-			err := bcrypt.CompareHashAndPassword(user.Password, []byte(params.Password))
-			if err != nil {
-				RespondWithError(w, 401, fmt.Sprintf("%s\n", err))
-				return
-			}
-			matchingUser = user
-			foundMatch = true
-			break
-		}
-	}
-
-	if !foundMatch {
-		RespondWithError(w, 401, fmt.Sprintf("%s\n", err))
-		return
-	}
-	if params.ExpiresInSeconds == 0 {
-		params.ExpiresInSeconds = 86400
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
-		Issuer: "chirpy",
-		IssuedAt: &jwt.NumericDate{
-			Time: time.Now(),
-		},
-		ExpiresAt: &jwt.NumericDate{
-			Time: time.Now().Add(time.Second * time.Duration(params.ExpiresInSeconds)),
-		},
-		Subject: fmt.Sprintf("%d", matchingUser.Id),
-	})
-	signedToken, err := token.SignedString([]byte(cfg.jwtSecret))
-	if err != nil {
-		RespondWithError(w, 500, fmt.Sprintf("%s\n", err))
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	respBody := returnVals{
-		Id:    matchingUser.Id,
-		Email: matchingUser.Email,
-		Token: signedToken,
-	}
-	err = json.NewEncoder(w).Encode(&respBody)
 	if err != nil {
 		RespondWithError(w, 500, fmt.Sprintf("%s\n", err))
 		return

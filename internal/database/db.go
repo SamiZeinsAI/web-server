@@ -18,8 +18,9 @@ func NewDB(path string) (*DB, error) {
 		return nil, err
 	}
 	err = db.WriteDB(DBStructure{
-		Chirps: map[int]Chirp{},
-		Users:  map[int]User{},
+		Chirps:        map[int]Chirp{},
+		Users:         map[int]User{},
+		RevokedTokens: map[string]RevokedToken{},
 	})
 	if err != nil {
 		return nil, err
@@ -29,22 +30,23 @@ func NewDB(path string) (*DB, error) {
 
 // ensureDB creates a new database file if it doesn't exist
 func (db *DB) EnsureDB() error {
+	dbStructure := DBStructure{
+		Chirps:        map[int]Chirp{},
+		Users:         map[int]User{},
+		RevokedTokens: map[string]RevokedToken{},
+	}
 	dat, err := os.ReadFile(db.path)
 	if err != nil {
-		db.WriteDB(DBStructure{
-			Chirps: map[int]Chirp{},
-			Users:  map[int]User{},
-		})
+		db.WriteDB(dbStructure)
 		return nil
 	}
-	dbStruc := DBStructure{
-		Chirps: map[int]Chirp{},
-		Users:  map[int]User{},
-	}
-	err = json.Unmarshal(dat, &dbStruc)
+
+	err = json.Unmarshal(dat, &dbStructure)
 	if err != nil {
 		db.WriteDB(DBStructure{
-			Chirps: map[int]Chirp{},
+			Chirps:        map[int]Chirp{},
+			Users:         map[int]User{},
+			RevokedTokens: map[string]RevokedToken{},
 		})
 		return nil
 	}
@@ -58,12 +60,12 @@ func (db *DB) LoadDB() (DBStructure, error) {
 	if err != nil {
 		return DBStructure{}, err
 	}
-	dbStruc := DBStructure{}
-	err = json.Unmarshal(dat, &dbStruc)
+	dbStructure := DBStructure{}
+	err = json.Unmarshal(dat, &dbStructure)
 	if err != nil {
 		return DBStructure{}, err
 	}
-	return dbStruc, nil
+	return dbStructure, nil
 }
 
 // writeDB writes the database file to disk
