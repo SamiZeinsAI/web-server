@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,6 +13,35 @@ import (
 
 // ErrNoAuthHeaderIncluded -
 var ErrNoAuthHeaderIncluded = errors.New("not auth header included in request")
+
+func AuthenticateUser(headers http.Header, secret string) (*jwt.Token, int, error) {
+	tokenString, err := GetBearerToken(headers)
+	if err != nil {
+		msg := fmt.Sprintf("Error getting bearer token: %s\n", err)
+		return nil, 0, errors.New(msg)
+	}
+	token, err := ParseToken(tokenString, secret)
+	if err != nil {
+		return nil, 0, err
+	}
+	issuer, err := token.Claims.GetIssuer()
+	if err != nil {
+		return nil, 0, err
+	}
+	if issuer == "chirpy-refresh" {
+		return nil, 0, errors.New("Issuer matched refresh token, access token required")
+	}
+	id, err := token.Claims.GetSubject()
+	if err != nil {
+		return nil, 0, err
+	}
+	idInt, err := strconv.Atoi(id)
+	if err != nil {
+		return nil, 0, err
+	}
+	return token, idInt, nil
+
+}
 
 func GetBearerToken(headers http.Header) (string, error) {
 	authHeader := headers.Get("Authorization")

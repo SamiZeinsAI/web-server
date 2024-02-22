@@ -26,6 +26,7 @@ type User struct {
 	Password []byte `json:"password"`
 }
 type Chirp struct {
-	Body string `json:"body"`
-	Id   int    `json:"id"`
+	Body     string `json:"body"`
+	Id       int    `json:"id"`
+	AuthorID int    `json:"author_id"`
 }

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/SamiZeinsAI/web-server/internal/auth"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -29,8 +30,9 @@ func (cfg *apiConfig) GetChirpsHandler(w http.ResponseWriter, r *http.Request) {
 func (cfg *apiConfig) PostChirpHandler(w http.ResponseWriter, r *http.Request) {
 
 	type returnVals struct {
-		Body string `json:"body"`
-		Id   int    `json:"id"`
+		Body     string `json:"body"`
+		Id       int    `json:"id"`
+		AuthorID int    `json:"author_id"`
 	}
 	type parameters struct {
 		Body string `json:"body"`
@@ -41,21 +43,32 @@ func (cfg *apiConfig) PostChirpHandler(w http.ResponseWriter, r *http.Request) {
 		RespondWithError(w, 500, "Error when decoding request")
 		return
 	}
-	chirp, err := cfg.DB.CreateChirp(params.Body)
+	_, userID, err := auth.AuthenticateUser(r.Header, cfg.jwtSecret)
+	if err != nil {
+		msg := fmt.Sprintf("Error authenticating user: %s\n", err)
+		RespondWithError(w, 400, msg)
+		return
+	}
+
+	chirp, err := cfg.DB.CreateChirp(params.Body, userID)
 	if err != nil {
 		msg := fmt.Sprintf("Error creating chirp: %s\n", err)
 		RespondWithError(w, 500, msg)
+		return
 	}
+
 	dbStructure, err := cfg.DB.LoadDB()
 	if err != nil {
 		msg := fmt.Sprintf("Error loading database: %s\n", err)
 		RespondWithError(w, 500, msg)
+		return
 	}
 	dbStructure.Chirps[len(dbStructure.Chirps)+1] = chirp
 	cfg.DB.WriteDB(dbStructure)
 	RespondWithJSON(w, 201, returnVals{
-		Id:   len(dbStructure.Chirps),
-		Body: params.Body,
+		Id:       len(dbStructure.Chirps),
+		Body:     params.Body,
+		AuthorID: userID,
 	})
 }
 

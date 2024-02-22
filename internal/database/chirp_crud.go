@@ -17,7 +17,7 @@ func cleanInput(input string) string {
 	return strings.Join(words, " ")
 }
 
-func (db *DB) CreateChirp(body string) (Chirp, error) {
+func (db *DB) CreateChirp(body string, authorId int) (Chirp, error) {
 	dbStructure, err := db.LoadDB()
 	if err != nil {
 		return Chirp{}, err
@@ -26,8 +26,9 @@ func (db *DB) CreateChirp(body string) (Chirp, error) {
 		return Chirp{}, errors.New("Chirp is too long")
 	}
 	return Chirp{
-		Body: cleanInput(body),
-		Id:   len(dbStructure.Chirps) + 1,
+		Body:     cleanInput(body),
+		Id:       len(dbStructure.Chirps) + 1,
+		AuthorID: authorId,
 	}, nil
 }
 
