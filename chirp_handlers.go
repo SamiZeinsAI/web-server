@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 
 	"github.com/SamiZeinsAI/web-server/internal/auth"
@@ -59,6 +60,18 @@ func (cfg *apiConfig) GetChirpsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		chirpsSlice = newChirpsSlice
 	}
+	sortQuery := r.URL.Query().Get("sort")
+
+	sort.Slice(chirpsSlice, func(x, y int) bool {
+		if sortQuery == "desc" {
+			return chirpsSlice[x].Id > chirpsSlice[y].Id
+
+		} else {
+			return chirpsSlice[x].Id < chirpsSlice[y].Id
+
+		}
+	})
+
 	err = json.NewEncoder(w).Encode(chirpsSlice)
 	if err != nil {
 		RespondWithError(w, 400, fmt.Sprintf("%s\n", err))
