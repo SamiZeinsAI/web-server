@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/SamiZeinsAI/web-server/internal/auth"
+	"github.com/SamiZeinsAI/web-server/internal/database"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -43,14 +44,26 @@ func (cfg *apiConfig) GetChirpsHandler(w http.ResponseWriter, r *http.Request) {
 		RespondWithError(w, 500, fmt.Sprintf("%s\n", err))
 		return
 	}
-
-	dat, err := json.Marshal(chirpsSlice)
+	authorID := r.URL.Query().Get("author_id")
+	if authorID != "" {
+		authorIDInt, err := strconv.Atoi(authorID)
+		if err != nil {
+			RespondWithError(w, 400, fmt.Sprintf("%s\n", err))
+			return
+		}
+		newChirpsSlice := []database.Chirp{}
+		for _, chirp := range chirpsSlice {
+			if chirp.AuthorID == authorIDInt {
+				newChirpsSlice = append(newChirpsSlice, chirp)
+			}
+		}
+		chirpsSlice = newChirpsSlice
+	}
+	err = json.NewEncoder(w).Encode(chirpsSlice)
 	if err != nil {
+		RespondWithError(w, 400, fmt.Sprintf("%s\n", err))
 		return
 	}
-	w.WriteHeader(200)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(dat)
 }
 
 func (cfg *apiConfig) PostChirpHandler(w http.ResponseWriter, r *http.Request) {
