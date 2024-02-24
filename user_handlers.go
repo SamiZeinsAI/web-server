@@ -71,8 +71,9 @@ func (cfg *apiConfig) PostUserHandler(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 	type returnVals struct {
-		Id    int    `json:"id"`
-		Email string `json:"email"`
+		Id          int    `json:"id"`
+		Email       string `json:"email"`
+		IsChirpyRed bool   `json:"is_chirpy_red"`
 	}
 
 	params := parameters{}
@@ -100,8 +101,9 @@ func (cfg *apiConfig) PostUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respBody := returnVals{
-		Id:    id,
-		Email: params.Email,
+		Id:          id,
+		Email:       params.Email,
+		IsChirpyRed: false,
 	}
 	dat, err := json.Marshal(respBody)
 	if err != nil {

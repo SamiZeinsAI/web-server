@@ -6,4 +6,5 @@ type apiConfig struct {
 	fileserverHits int
 	DB             *database.DB
 	jwtSecret      string
+	apiKey         string
 }

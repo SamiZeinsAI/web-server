@@ -13,6 +13,7 @@ import (
 
 // ErrNoAuthHeaderIncluded -
 var ErrNoAuthHeaderIncluded = errors.New("not auth header included in request")
+var ErrNoApiKeyIncluded = errors.New("not correct api key header included in request")
 
 func AuthenticateUser(headers http.Header, secret string) (*jwt.Token, int, error) {
 	tokenString, err := GetBearerToken(headers)
@@ -29,7 +30,7 @@ func AuthenticateUser(headers http.Header, secret string) (*jwt.Token, int, erro
 		return nil, 0, err
 	}
 	if issuer == "chirpy-refresh" {
-		return nil, 0, errors.New("Issuer matched refresh token, access token required")
+		return nil, 0, errors.New("issuer matched refresh token, access token required")
 	}
 	id, err := token.Claims.GetSubject()
 	if err != nil {
@@ -41,6 +42,19 @@ func AuthenticateUser(headers http.Header, secret string) (*jwt.Token, int, erro
 	}
 	return token, idInt, nil
 
+}
+
+func GetApiKey(headers http.Header) (string, error) {
+	authHeader := headers.Get("Authorization")
+	if authHeader == "" {
+		return "", ErrNoAuthHeaderIncluded
+	}
+	splitAuth := strings.Split(authHeader, " ")
+	if len(splitAuth) < 2 || splitAuth[0] != "ApiKey" {
+		return "", errors.New("malformed authorization header")
+	}
+
+	return splitAuth[1], nil
 }
 
 func GetBearerToken(headers http.Header) (string, error) {

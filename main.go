@@ -38,6 +38,7 @@ func main() {
 		fileserverHits: 0,
 		DB:             db,
 		jwtSecret:      os.Getenv("JWT_SECRET"),
+		apiKey:         os.Getenv("POLKA_API_KEY"),
 	}
 
 	r := chi.NewRouter()
@@ -56,6 +57,7 @@ func main() {
 	apiRouter.Get("/chirps", apiCfg.GetChirpsHandler)
 	apiRouter.Post("/chirps", apiCfg.PostChirpHandler)
 	apiRouter.Get("/chirps/{id}", apiCfg.GetChirpHandler)
+	apiRouter.Delete("/chirps/{chirpID}", apiCfg.DeleteChirpHandler)
 
 	apiRouter.Post("/users", apiCfg.PostUserHandler)
 	apiRouter.Put("/users", apiCfg.PutUserHandler)
@@ -65,6 +67,8 @@ func main() {
 	apiRouter.Post("/refresh", apiCfg.PostRefreshHandler)
 
 	apiRouter.Post("/revoke", apiCfg.PostRevokeHandler)
+
+	apiRouter.Post("/polka/webhooks", apiCfg.PostPolkaWebhook)
 
 	adminRouter.Get("/metrics", apiCfg.getMetrics)
 	r.Mount("/api", apiRouter)

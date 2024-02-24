@@ -10,6 +10,32 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+func (cfg *apiConfig) DeleteChirpHandler(w http.ResponseWriter, r *http.Request) {
+	_, userID, err := auth.AuthenticateUser(r.Header, cfg.jwtSecret)
+	if err != nil {
+		RespondWithError(w, 400, fmt.Sprintf("%s\n", err))
+		return
+	}
+	chirpID, err := strconv.Atoi(chi.URLParam(r, "chirpID"))
+	if err != nil {
+		RespondWithError(w, 400, fmt.Sprintf("%s\n", err))
+		return
+	}
+	dbStructure, err := cfg.DB.LoadDB()
+	if err != nil {
+		RespondWithError(w, 500, fmt.Sprintf("%s\n", err))
+		return
+	}
+	chirp, ok := dbStructure.Chirps[chirpID]
+	if !ok || chirp.AuthorID != userID {
+		RespondWithError(w, 403, "User is not author of this shirp")
+		return
+	}
+	delete(dbStructure.Chirps, chirpID)
+	w.WriteHeader(200)
+
+}
+
 func (cfg *apiConfig) GetChirpsHandler(w http.ResponseWriter, r *http.Request) {
 
 	chirpsSlice, err := cfg.DB.GetChirps()

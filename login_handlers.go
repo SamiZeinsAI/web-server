@@ -19,6 +19,7 @@ func (cfg *apiConfig) PostLoginHandler(w http.ResponseWriter, r *http.Request) {
 	type returnVals struct {
 		Id           int    `json:"id"`
 		Email        string `json:"email"`
+		IsChirpyRed  bool   `json:"is_chirpy_red"`
 		Token        string `json:"token"`
 		RefreshToken string `json:"refresh_token"`
 	}
@@ -41,20 +42,18 @@ func (cfg *apiConfig) PostLoginHandler(w http.ResponseWriter, r *http.Request) {
 	for _, user := range dbStructure.Users {
 		if user.Email == params.Email {
 			err := bcrypt.CompareHashAndPassword(user.Password, []byte(params.Password))
-			if err != nil {
-				RespondWithError(w, 401, fmt.Sprintf("%s\n", err))
-				return
+			if err == nil {
+				matchingUser = user
+				foundMatch = true
+				break
 			}
-			matchingUser = user
-			foundMatch = true
-			break
+
 		}
 	}
 	if !foundMatch {
-		RespondWithError(w, 401, fmt.Sprintf("%s\n", err))
+		RespondWithError(w, 401, "Matching user not found")
 		return
 	}
-
 	token, err := auth.MakeToken(matchingUser.Id, "chirpy-access", cfg.jwtSecret)
 	if err != nil {
 		RespondWithError(w, 500, fmt.Sprintf("%s\n", err))
@@ -72,6 +71,7 @@ func (cfg *apiConfig) PostLoginHandler(w http.ResponseWriter, r *http.Request) {
 	respBody := returnVals{
 		Id:           matchingUser.Id,
 		Email:        matchingUser.Email,
+		IsChirpyRed:  matchingUser.IsChirpyRed,
 		Token:        token,
 		RefreshToken: refreshToken,
 	}
